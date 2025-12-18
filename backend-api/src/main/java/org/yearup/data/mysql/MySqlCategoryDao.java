@@ -1,15 +1,11 @@
 package org.yearup.data.mysql;
 
-import com.mysql.cj.protocol.Resultset;
 import org.springframework.stereotype.Component;
 import org.yearup.data.CategoryDao;
 import org.yearup.models.Category;
 
 import javax.sql.DataSource;
-import java.sql.Connection;
-import java.sql.PreparedStatement;
-import java.sql.ResultSet;
-import java.sql.SQLException;
+import java.sql.*;
 import java.util.ArrayList;
 import java.util.List;
 
@@ -49,11 +45,14 @@ public class MySqlCategoryDao extends MySqlDaoBase implements CategoryDao {
 
         try (Connection connection = getConnection();
              PreparedStatement preparedStatement = connection.prepareStatement(sql)) {
-            preparedStatement.setInt(1, categoryId);
 
+            preparedStatement.setInt(1, categoryId);
             ResultSet result = preparedStatement.executeQuery();
-            result.next();
-            return mapRow(result);
+
+            if (result.next()){
+                return mapRow(result);
+            }
+            return null;
         } catch (SQLException e) {
             e.printStackTrace();
             throw new RuntimeException("OH NO WE HAVE A PROBLEM");
@@ -64,10 +63,10 @@ public class MySqlCategoryDao extends MySqlDaoBase implements CategoryDao {
     public Category create(Category category) {
         // create a new category
         String sql = """
-                INSERT INTO categories (name, description) VALUE (?,?)
+                INSERT INTO categories (name, description) VALUES (?,?)
                 """;
         try (Connection connection = getConnection();
-             PreparedStatement preparedStatement = connection.prepareStatement(sql)) {
+             PreparedStatement preparedStatement = connection.prepareStatement(sql, Statement.RETURN_GENERATED_KEYS)) {
 
             preparedStatement.setString(1, category.getName());
             preparedStatement.setString(2, category.getDescription());
@@ -87,14 +86,19 @@ public class MySqlCategoryDao extends MySqlDaoBase implements CategoryDao {
     public void update(int categoryId, Category category) {
         // update category
         String sql = """
-                UPDATE categories SET name = ?, description ? WHERE category_id = ?
+                UPDATE categories SET name = ?, description = ? WHERE category_id = ?
                 """;
         try (Connection connection = getConnection();
              PreparedStatement preparedStatement = connection.prepareStatement(sql)) {
             preparedStatement.setString(1, category.getName());
             preparedStatement.setString(2, category.getDescription());
-            preparedStatement.setString(3, String.valueOf(categoryId));
-            preparedStatement.execute();
+            preparedStatement.setInt(3,categoryId);
+
+            int rowsAffected = preparedStatement.executeUpdate();
+            if(rowsAffected == 0){
+                throw new RuntimeException("Category was not found");
+            }
+
         } catch (SQLException e) {
             throw new RuntimeException("OH NO SOMETHING WENT WRONG");
         }
@@ -127,7 +131,6 @@ public class MySqlCategoryDao extends MySqlDaoBase implements CategoryDao {
             setName(name);
             setDescription(description);
         }};
-
         return category;
     }
 
