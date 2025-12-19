@@ -21,15 +21,14 @@ public class MySqlProductDao extends MySqlDaoBase implements ProductDao {
         List<Product> products = new ArrayList<>();
 
         String sql = "SELECT * FROM products " +
-                "WHERE (? IS NULL OR category_id = ?) " +
-                "   AND (? IS NULL OR price >= ?) " +
-                "   AND (? IS NULL OR price <= ?) " +
-                "   AND (? IS NULL OR subcategory = ?) ";
-
+                "WHERE (category_id = ? OR ? = -1) " +
+                "   AND (? = -1 OR price >= ?) " +
+                "   AND (? = -1 OR price <= ?) " +
+                "   AND (? = '' OR subcategory = ?) ";
 
         categoryId = categoryId == null ? -1 : categoryId;
-        minPrice = minPrice == null ? new BigDecimal("-1") : minPrice;
-        maxPrice = maxPrice == null ? new BigDecimal("-1") : maxPrice;
+        minPrice = minPrice == null ? BigDecimal.valueOf(-1) : minPrice;
+        maxPrice = maxPrice == null ? BigDecimal.valueOf(-1) : maxPrice;
         subCategory = subCategory == null ? "" : subCategory;
 
         try (Connection connection = getConnection()) {
@@ -37,6 +36,7 @@ public class MySqlProductDao extends MySqlDaoBase implements ProductDao {
 
             statement.setInt(1, categoryId);
             statement.setInt(2, categoryId);
+
             statement.setBigDecimal(3, minPrice);
             statement.setBigDecimal(4, minPrice);
             statement.setBigDecimal(5, maxPrice);
